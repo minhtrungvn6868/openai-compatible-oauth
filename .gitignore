@@ -8,6 +8,8 @@ out/
 # build
 dist/
 build/
+release/
+claude-proxy.tar.gz
 
 # env files
 .env

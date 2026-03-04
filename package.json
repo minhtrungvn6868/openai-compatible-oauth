@@ -6,6 +6,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "release": "tsx scripts/build.ts",
     "type-check": "tsc --noEmit",
     "lint": "tsc --noEmit"
   },
@@ -21,6 +22,7 @@
   "devDependencies": {
     "@types/node": "^25.3.3",
     "@types/uuid": "^11.0.0",
+    "esbuild": "^0.27.3",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

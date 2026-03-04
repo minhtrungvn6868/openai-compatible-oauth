@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { existsSync } from 'node:fs';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
@@ -16,6 +17,10 @@ import { registerEmbeddingRoutes } from './routes/embeddings.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const publicDir = existsSync(join(__dirname, 'public'))
+  ? join(__dirname, 'public')
+  : join(__dirname, '..', 'public');
+
 async function main() {
   const config = loadConfig();
 
@@ -24,7 +29,7 @@ async function main() {
   await app.register(cors, { origin: true });
 
   await app.register(fastifyStatic, {
-    root: join(__dirname, '..', 'public'),
+    root: publicDir,
     prefix: '/',
   });
 

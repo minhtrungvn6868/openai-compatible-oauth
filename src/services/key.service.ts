@@ -1,6 +1,8 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { generateApiKey, hashApiKey, verifyApiKey } from '../lib/crypto.js';
 import type {
   ApiKeyRecord,
@@ -10,7 +12,8 @@ import type {
   RateLimitEntry,
 } from '../types/key.types.js';
 
-const KEYS_FILE = 'keys.json';
+const __ks_dirname = dirname(fileURLToPath(import.meta.url));
+const KEYS_FILE = join(__ks_dirname, 'keys.json');
 const DEFAULT_RATE_LIMIT = 60;
 
 export class KeyService {

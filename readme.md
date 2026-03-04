@@ -2,7 +2,62 @@
 
 Proxy server cung cấp OpenAI-compatible API, cho phép các client (VSCode extensions, Cursor, Continue.dev,...) kết nối tới Claude thông qua giao thức OpenAI.
 
-## Architecture
+## Quick Usage
+
+Sau khi cài đặt (xem [Quick Install](#quick-install) hoặc [Manual Setup](#manual-setup-development)):
+
+1. **Mở admin panel**: `http://localhost:3003/admin`
+2. **Đăng nhập** bằng ADMIN KEY (hiển thị khi cài đặt)
+3. **Tạo API key** cho user/service
+4. **Cấu hình client** với:
+
+```
+Base URL: http://localhost:3003/v1
+API Key:  sk-... (key vừa tạo)
+Model:    claude-sonnet-4-6
+```
+
+Hỗ trợ mọi OpenAI-compatible client: **Cursor**, **Continue.dev**, **VSCode extensions**, **OpenAI SDK** (Node.js / Python), **curl**,...
+
+---
+
+## Quick Install
+
+### Mac / Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/<owner>/<repo>/main/install.sh | sh
+```
+
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/<owner>/<repo>/main/install.ps1 | iex
+```
+
+Installer sẽ tự động:
+- Download và cài đặt server
+- Auto-generate các secret keys
+- Hướng dẫn lấy Anthropic OAuth Token (`claude setup-token`)
+- Đăng ký auto-start khi khởi động máy
+- Hiển thị ADMIN KEY và hướng dẫn sử dụng
+
+### Commands
+
+```bash
+claude-proxy start      # Start the server
+claude-proxy stop       # Stop the server
+claude-proxy restart    # Restart the server
+claude-proxy status     # Check server status
+claude-proxy logs       # Tail server logs
+claude-proxy uninstall  # Remove completely
+```
+
+---
+
+## Manual Setup (Development)
+
+### Architecture
 
 ```
 Client (OpenAI SDK) → Proxy Server (Fastify) → pi-ai → Anthropic Claude API
@@ -11,13 +66,11 @@ Client (OpenAI SDK) → Proxy Server (Fastify) → pi-ai → Anthropic Claude AP
                    (keys.json)
 ```
 
-## Prerequisites
+### Prerequisites
 
 - Node.js >= 18
 - pnpm (`npm install -g pnpm`)
 - Anthropic OAuth Token (từ Claude Code)
-
-## Setup
 
 ### 1. Install dependencies
 
@@ -55,7 +108,7 @@ ADMIN_KEY=my-admin-key
 DEFAULT_MODEL=claude-sonnet-4-6
 ```
 
-**Lấy `ANTHROPIC_OAUTH_TOKEN`:** Token này lấy từ Claude Code OAuth flow. run in terminal `claude setup-token`. Format: `sk-ant-oat01-...`
+**Lấy `ANTHROPIC_OAUTH_TOKEN`:** Token này lấy từ Claude Code OAuth flow. Run in terminal `claude setup-token`. Format: `sk-ant-oat01-...`
 
 ### 3. Chạy server
 
@@ -65,6 +118,12 @@ pnpm dev
 
 # Production
 pnpm build && pnpm start
+```
+
+### 4. Build release
+
+```bash
+pnpm release  # Tạo release/claude-proxy.tar.gz
 ```
 
 Server sẽ chạy tại `http://localhost:3003`.
