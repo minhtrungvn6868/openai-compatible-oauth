@@ -6,7 +6,7 @@ set -e
 # Usage: curl -fsSL https://<url>/install.sh | sh
 # ─────────────────────────────────────────────────────
 
-REPO="anthropic/claude-proxy"
+REPO="minhtrungvn6868/openai-compatible-oauth"
 INSTALL_DIR="$HOME/.claude-proxy"
 BIN_DIR="/usr/local/bin"
 VERSION="${CLAUDE_PROXY_VERSION:-latest}"

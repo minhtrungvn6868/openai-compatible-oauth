@@ -26,13 +26,13 @@ Hỗ trợ mọi OpenAI-compatible client: **Cursor**, **Continue.dev**, **VSCod
 ### Mac / Linux
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<owner>/<repo>/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/minhtrungvn6868/openai-compatible-oauth/main/install.sh | sh
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/<owner>/<repo>/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/minhtrungvn6868/openai-compatible-oauth/main/install.ps1 | iex
 ```
 
 Installer sẽ tự động:
@@ -301,3 +301,11 @@ Settings > Models > Add Model:
 - API Base URL: `http://localhost:3003/v1`
 - API Key: `sk-...`
 - Model: `claude-sonnet-4-6`
+
+## Deploy & Update
+
+Xem [docs/deploy.md](docs/deploy.md) cho hướng dẫn chi tiết về:
+- Build & publish release mới (dành cho maintainer)
+- Update version mới (dành cho end-user)
+- Quản lý auto-start service (launchd / systemd / Task Scheduler)
+- Rollback, troubleshooting

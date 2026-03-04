@@ -5,7 +5,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$Repo = "anthropic/claude-proxy"
+$Repo = "minhtrungvn6868/openai-compatible-oauth"
 $InstallDir = "$env:USERPROFILE\.claude-proxy"
 $Version = if ($env:CLAUDE_PROXY_VERSION) { $env:CLAUDE_PROXY_VERSION } else { "latest" }
 
