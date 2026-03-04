@@ -173,32 +173,59 @@ LOGFILE="$INSTALL_DIR/server.log"
 
 case "${1:-help}" in
   start)
+    PORT=$(grep '^PORT=' "$INSTALL_DIR/.env" | cut -d= -f2)
+    # Check if already running (by PID file or port)
     if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
       echo "claude-proxy is already running (PID $(cat "$PIDFILE"))"
-      echo "  Admin:  http://localhost:$(grep '^PORT=' "$INSTALL_DIR/.env" | cut -d= -f2)/admin"
-      echo "  API:    http://localhost:$(grep '^PORT=' "$INSTALL_DIR/.env" | cut -d= -f2)/v1"
+      echo "  Admin:  http://localhost:${PORT}/admin"
+      echo "  API:    http://localhost:${PORT}/v1"
       exit 0
     fi
-    cd "$INSTALL_DIR"
-    nohup node server.mjs > "$LOGFILE" 2>&1 &
-    echo $! > "$PIDFILE"
-    PORT=$(grep '^PORT=' "$INSTALL_DIR/.env" | cut -d= -f2)
-    echo "claude-proxy started (PID $!)"
+    # Prefer launchd on macOS, systemd on Linux
+    PLIST="$HOME/Library/LaunchAgents/com.claude-proxy.server.plist"
+    if [ "$(uname -s)" = "Darwin" ] && [ -f "$PLIST" ]; then
+      launchctl load "$PLIST" 2>/dev/null
+      sleep 1
+      PID=$(lsof -ti :"$PORT" 2>/dev/null | head -1)
+      echo "claude-proxy started via launchd${PID:+ (PID $PID)}"
+    elif [ "$(uname -s)" = "Linux" ] && systemctl --user is-enabled claude-proxy >/dev/null 2>&1; then
+      systemctl --user start claude-proxy
+      sleep 1
+      PID=$(lsof -ti :"$PORT" 2>/dev/null | head -1)
+      echo "claude-proxy started via systemd${PID:+ (PID $PID)}"
+    else
+      cd "$INSTALL_DIR"
+      nohup node server.mjs > "$LOGFILE" 2>&1 &
+      echo $! > "$PIDFILE"
+      PID=$!
+      echo "claude-proxy started (PID $PID)"
+    fi
     echo "  Admin:  http://localhost:${PORT}/admin"
     echo "  API:    http://localhost:${PORT}/v1"
     echo "  Logs:   $LOGFILE"
     ;;
   stop)
+    STOPPED=false
+    # On macOS, unload launchd service first (prevents auto-restart)
+    PLIST="$HOME/Library/LaunchAgents/com.claude-proxy.server.plist"
+    if [ "$(uname -s)" = "Darwin" ] && [ -f "$PLIST" ]; then
+      launchctl unload "$PLIST" 2>/dev/null && STOPPED=true
+    fi
+    # On Linux, stop systemd service
+    if [ "$(uname -s)" = "Linux" ]; then
+      systemctl --user stop claude-proxy 2>/dev/null && STOPPED=true
+    fi
+    # Also kill by PID file (for manual nohup starts)
     if [ -f "$PIDFILE" ]; then
       PID=$(cat "$PIDFILE")
       if kill -0 "$PID" 2>/dev/null; then
         kill "$PID"
-        rm -f "$PIDFILE"
-        echo "claude-proxy stopped"
-      else
-        rm -f "$PIDFILE"
-        echo "claude-proxy was not running (stale PID file cleaned)"
+        STOPPED=true
       fi
+      rm -f "$PIDFILE"
+    fi
+    if [ "$STOPPED" = true ]; then
+      echo "claude-proxy stopped"
     else
       echo "claude-proxy is not running"
     fi
@@ -209,9 +236,16 @@ case "${1:-help}" in
     "$0" start
     ;;
   status)
+    PORT=$(grep '^PORT=' "$INSTALL_DIR/.env" | cut -d= -f2)
+    PID=""
+    # Check PID file first
     if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
       PID=$(cat "$PIDFILE")
-      PORT=$(grep '^PORT=' "$INSTALL_DIR/.env" | cut -d= -f2)
+    else
+      # Fallback: check if something is listening on the port (launchd/systemd managed)
+      PID=$(lsof -ti :"$PORT" 2>/dev/null | head -1)
+    fi
+    if [ -n "$PID" ]; then
       echo "claude-proxy is running (PID $PID)"
       echo "  Admin:  http://localhost:${PORT}/admin"
       echo "  API:    http://localhost:${PORT}/v1"

@@ -115,6 +115,55 @@
           Copy
         </button>
       </div>
+
+      <!-- Code Examples -->
+      <div class="mt-4 pt-4 border-t border-green-700/50">
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-green-300 text-sm font-medium">Code Examples</p>
+          <div class="flex gap-1">
+            <button onclick="showExample('curl')" class="example-tab text-xs px-3 py-1 rounded-lg transition-colors bg-green-700/50 text-green-200" data-tab="curl">cURL</button>
+            <button onclick="showExample('python')" class="example-tab text-xs px-3 py-1 rounded-lg transition-colors text-green-300/60 hover:text-green-200" data-tab="python">Python</button>
+            <button onclick="showExample('javascript')" class="example-tab text-xs px-3 py-1 rounded-lg transition-colors text-green-300/60 hover:text-green-200" data-tab="javascript">JavaScript</button>
+          </div>
+        </div>
+        <div id="example-curl" class="example-block">
+          <pre class="bg-gray-900 rounded-lg p-3 text-sm font-mono text-gray-300 overflow-x-auto"><code>curl <span id="ex-curl-url"></span>/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <span class="text-green-400 ex-key-placeholder"></span>" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'</code></pre>
+        </div>
+        <div id="example-python" class="example-block hidden">
+          <pre class="bg-gray-900 rounded-lg p-3 text-sm font-mono text-gray-300 overflow-x-auto"><code>from openai import OpenAI
+
+client = OpenAI(
+    api_key="<span class="text-green-400 ex-key-placeholder"></span>",
+    base_url="<span class="ex-base-url"></span>/v1"
+)
+
+response = client.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+print(response.choices[0].message.content)</code></pre>
+        </div>
+        <div id="example-javascript" class="example-block hidden">
+          <pre class="bg-gray-900 rounded-lg p-3 text-sm font-mono text-gray-300 overflow-x-auto"><code>import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "<span class="text-green-400 ex-key-placeholder"></span>",
+  baseURL: "<span class="ex-base-url"></span>/v1",
+});
+
+const response = await client.chat.completions.create({
+  model: "gpt-4o-mini",
+  messages: [{ role: "user", content: "Hello!" }],
+});
+console.log(response.choices[0].message.content);</code></pre>
+        </div>
+      </div>
     </div>
 
     <!-- Keys Table -->
@@ -344,6 +393,7 @@ document.getElementById('create-key-form').addEventListener('submit', async (e) 
   // Show the raw key
   document.getElementById('new-key-value').textContent = data.key;
   document.getElementById('new-key-banner').classList.remove('hidden');
+  updateCodeExamples(data.key);
 
   // Reset form
   document.getElementById('key-name').value = '';
@@ -363,6 +413,26 @@ document.getElementById('copy-key-btn').addEventListener('click', () => {
     }, 2000);
   });
 });
+
+// Code examples
+function showExample(lang) {
+  document.querySelectorAll('.example-block').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.example-tab').forEach(el => {
+    el.classList.remove('bg-green-700/50', 'text-green-200');
+    el.classList.add('text-green-300/60');
+  });
+  document.getElementById(`example-${lang}`).classList.remove('hidden');
+  const activeTab = document.querySelector(`.example-tab[data-tab="${lang}"]`);
+  activeTab.classList.add('bg-green-700/50', 'text-green-200');
+  activeTab.classList.remove('text-green-300/60');
+}
+
+function updateCodeExamples(apiKey) {
+  const baseUrl = window.location.origin;
+  document.querySelectorAll('.ex-key-placeholder').forEach(el => { el.textContent = apiKey; });
+  document.querySelectorAll('.ex-base-url').forEach(el => { el.textContent = baseUrl; });
+  document.getElementById('ex-curl-url').textContent = baseUrl;
+}
 
 // Toggle key
 async function toggleKey(id) {
