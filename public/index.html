@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenAI-Compatible Proxy for Claude</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+  <div class="max-w-4xl mx-auto px-6 py-12">
+    <!-- Header -->
+    <div class="text-center mb-12">
+      <h1 class="text-4xl font-bold mb-3">OpenAI-Compatible Proxy for Claude</h1>
+      <p class="text-gray-400 text-lg">Use Claude models through the OpenAI API format</p>
+      <div class="flex justify-center gap-3 mt-4">
+        <span class="bg-green-900/50 text-green-400 text-xs font-medium px-3 py-1 rounded-full border border-green-800">Server Running</span>
+        <a href="/admin" class="bg-gray-800 text-gray-300 text-xs font-medium px-3 py-1 rounded-full border border-gray-700 hover:bg-gray-700 transition-colors">Admin Panel</a>
+      </div>
+    </div>
+
+    <!-- Quick Start -->
+    <section class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Quick Start</h2>
+      <div class="space-y-3 text-sm text-gray-300">
+        <div class="flex gap-3">
+          <span class="bg-blue-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5">1</span>
+          <p>Get an API key from the admin (or create one via the <a href="/admin" class="text-blue-400 hover:underline">Admin Panel</a>)</p>
+        </div>
+        <div class="flex gap-3">
+          <span class="bg-blue-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5">2</span>
+          <p>Point your OpenAI-compatible client to: <code class="bg-gray-800 px-2 py-0.5 rounded text-blue-300" id="base-url"></code></p>
+        </div>
+        <div class="flex gap-3">
+          <span class="bg-blue-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5">3</span>
+          <p>Use your API key as the <code class="bg-gray-800 px-2 py-0.5 rounded text-blue-300">Authorization: Bearer sk-...</code> header</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- API Endpoints -->
+    <section class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">API Endpoints</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-gray-400 border-b border-gray-800">
+              <th class="pb-3 pr-4">Method</th>
+              <th class="pb-3 pr-4">Endpoint</th>
+              <th class="pb-3 pr-4">Auth</th>
+              <th class="pb-3">Description</th>
+            </tr>
+          </thead>
+          <tbody class="text-gray-300">
+            <tr class="border-b border-gray-800/50">
+              <td class="py-3 pr-4"><span class="bg-green-900/50 text-green-400 text-xs font-mono px-2 py-0.5 rounded">POST</span></td>
+              <td class="py-3 pr-4 font-mono text-sm">/v1/chat/completions</td>
+              <td class="py-3 pr-4"><span class="text-yellow-400 text-xs">API Key</span></td>
+              <td class="py-3">Chat completions (streaming & non-streaming)</td>
+            </tr>
+            <tr class="border-b border-gray-800/50">
+              <td class="py-3 pr-4"><span class="bg-green-900/50 text-green-400 text-xs font-mono px-2 py-0.5 rounded">POST</span></td>
+              <td class="py-3 pr-4 font-mono text-sm">/v1/completions</td>
+              <td class="py-3 pr-4"><span class="text-yellow-400 text-xs">API Key</span></td>
+              <td class="py-3">Legacy text completions</td>
+            </tr>
+            <tr class="border-b border-gray-800/50">
+              <td class="py-3 pr-4"><span class="bg-blue-900/50 text-blue-400 text-xs font-mono px-2 py-0.5 rounded">GET</span></td>
+              <td class="py-3 pr-4 font-mono text-sm">/v1/models</td>
+              <td class="py-3 pr-4"><span class="text-gray-500 text-xs">None</span></td>
+              <td class="py-3">List available models</td>
+            </tr>
+            <tr class="border-b border-gray-800/50">
+              <td class="py-3 pr-4"><span class="bg-blue-900/50 text-blue-400 text-xs font-mono px-2 py-0.5 rounded">GET</span></td>
+              <td class="py-3 pr-4 font-mono text-sm">/v1/models/:id</td>
+              <td class="py-3 pr-4"><span class="text-gray-500 text-xs">None</span></td>
+              <td class="py-3">Get model details</td>
+            </tr>
+            <tr class="border-b border-gray-800/50">
+              <td class="py-3 pr-4"><span class="bg-green-900/50 text-green-400 text-xs font-mono px-2 py-0.5 rounded">POST</span></td>
+              <td class="py-3 pr-4 font-mono text-sm">/v1/embeddings</td>
+              <td class="py-3 pr-4"><span class="text-yellow-400 text-xs">API Key</span></td>
+              <td class="py-3">Embeddings (not supported, returns 501)</td>
+            </tr>
+            <tr class="border-b border-gray-800/50">
+              <td class="py-3 pr-4"><span class="bg-blue-900/50 text-blue-400 text-xs font-mono px-2 py-0.5 rounded">GET</span></td>
+              <td class="py-3 pr-4 font-mono text-sm">/health</td>
+              <td class="py-3 pr-4"><span class="text-gray-500 text-xs">None</span></td>
+              <td class="py-3">Health check</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Code Examples -->
+    <section class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Code Examples</h2>
+
+      <!-- Tabs -->
+      <div class="flex gap-1 mb-4 border-b border-gray-800">
+        <button class="tab-btn active px-4 py-2 text-sm font-medium rounded-t-lg transition-colors" data-tab="curl">cURL</button>
+        <button class="tab-btn px-4 py-2 text-sm font-medium rounded-t-lg transition-colors" data-tab="node">Node.js</button>
+        <button class="tab-btn px-4 py-2 text-sm font-medium rounded-t-lg transition-colors" data-tab="python">Python</button>
+      </div>
+
+      <!-- cURL -->
+      <div class="tab-content" id="tab-curl">
+        <div class="relative">
+          <button class="copy-btn absolute top-3 right-3 text-gray-500 hover:text-gray-300 text-xs bg-gray-800 px-2 py-1 rounded transition-colors" data-target="code-curl">Copy</button>
+          <pre class="bg-gray-950 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm"><code id="code-curl" class="text-gray-300">curl -X POST <span id="curl-url"></span>/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-your-api-key" \
+  -d '{
+    "model": "claude-sonnet-4-6",
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ],
+    "stream": false
+  }'</code></pre>
+        </div>
+      </div>
+
+      <!-- Node.js -->
+      <div class="tab-content hidden" id="tab-node">
+        <div class="relative">
+          <button class="copy-btn absolute top-3 right-3 text-gray-500 hover:text-gray-300 text-xs bg-gray-800 px-2 py-1 rounded transition-colors" data-target="code-node">Copy</button>
+          <pre class="bg-gray-950 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm"><code id="code-node" class="text-gray-300">import OpenAI from 'openai';
+
+const client = new OpenAI({
+  baseURL: '<span class="node-url"></span>/v1',
+  apiKey: 'sk-your-api-key',
+});
+
+const response = await client.chat.completions.create({
+  model: 'claude-sonnet-4-6',
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+
+console.log(response.choices[0].message.content);</code></pre>
+        </div>
+      </div>
+
+      <!-- Python -->
+      <div class="tab-content hidden" id="tab-python">
+        <div class="relative">
+          <button class="copy-btn absolute top-3 right-3 text-gray-500 hover:text-gray-300 text-xs bg-gray-800 px-2 py-1 rounded transition-colors" data-target="code-python">Copy</button>
+          <pre class="bg-gray-950 border border-gray-800 rounded-lg p-4 overflow-x-auto text-sm"><code id="code-python" class="text-gray-300">from openai import OpenAI
+
+client = OpenAI(
+    base_url="<span class="python-url"></span>/v1",
+    api_key="sk-your-api-key",
+)
+
+response = client.chat.completions.create(
+    model="claude-sonnet-4-6",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+
+print(response.choices[0].message.content)</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- IDE Configuration -->
+    <section class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">IDE Configuration</h2>
+      <div class="grid md:grid-cols-2 gap-4">
+        <!-- VSCode -->
+        <div class="bg-gray-950 border border-gray-800 rounded-lg p-4">
+          <h3 class="text-sm font-semibold text-gray-200 mb-2">VSCode (Continue.dev / Kilo)</h3>
+          <pre class="text-xs text-gray-400 overflow-x-auto"><code>{
+  "provider": "openai",
+  "baseUrl": "<span class="ide-url"></span>/v1",
+  "apiKey": "sk-...",
+  "model": "claude-sonnet-4-6"
+}</code></pre>
+        </div>
+        <!-- Cursor -->
+        <div class="bg-gray-950 border border-gray-800 rounded-lg p-4">
+          <h3 class="text-sm font-semibold text-gray-200 mb-2">Cursor</h3>
+          <div class="text-xs text-gray-400 space-y-1">
+            <p>Settings &gt; Models &gt; Add Model:</p>
+            <ul class="list-disc list-inside space-y-0.5 ml-2">
+              <li>API Base URL: <code class="text-blue-300 ide-url"></code>/v1</li>
+              <li>API Key: <code class="text-blue-300">sk-...</code></li>
+              <li>Model: <code class="text-blue-300">claude-sonnet-4-6</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Supported Features</h2>
+      <div class="grid sm:grid-cols-2 gap-2 text-sm text-gray-300">
+        <div class="flex items-center gap-2"><span class="text-green-400">&#10003;</span> Chat completions (streaming & non-streaming)</div>
+        <div class="flex items-center gap-2"><span class="text-green-400">&#10003;</span> Tool / function calling</div>
+        <div class="flex items-center gap-2"><span class="text-green-400">&#10003;</span> Multimodal content (text + image)</div>
+        <div class="flex items-center gap-2"><span class="text-green-400">&#10003;</span> System messages</div>
+        <div class="flex items-center gap-2"><span class="text-green-400">&#10003;</span> Legacy text completions</div>
+        <div class="flex items-center gap-2"><span class="text-green-400">&#10003;</span> Rate limiting (per key, per minute)</div>
+        <div class="flex items-center gap-2"><span class="text-green-400">&#10003;</span> API key management with HMAC hashing</div>
+        <div class="flex items-center gap-2"><span class="text-green-400">&#10003;</span> Admin panel for key management</div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <div class="text-center text-gray-600 text-xs mt-8">
+      <p>OpenAI-Compatible Proxy for Claude &mdash; Powered by Fastify &amp; Anthropic Claude API</p>
+    </div>
+  </div>
+
+  <style>
+    .tab-btn { color: #6b7280; }
+    .tab-btn:hover { color: #d1d5db; }
+    .tab-btn.active { color: #60a5fa; border-bottom: 2px solid #3b82f6; }
+  </style>
+
+  <script>
+    const baseUrl = window.location.origin;
+
+    document.getElementById('base-url').textContent = baseUrl + '/v1';
+    document.getElementById('curl-url').textContent = baseUrl;
+    document.querySelectorAll('.node-url').forEach(el => el.textContent = baseUrl);
+    document.querySelectorAll('.python-url').forEach(el => el.textContent = baseUrl);
+    document.querySelectorAll('.ide-url').forEach(el => el.textContent = baseUrl);
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+      });
+    });
+
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const code = document.getElementById(btn.dataset.target).textContent;
+        navigator.clipboard.writeText(code).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy', 2000);
+        });
+      });
+    });
+  </script>
+</body>
+</html>

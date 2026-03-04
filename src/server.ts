@@ -28,6 +28,10 @@ async function main() {
     prefix: '/',
   });
 
+  app.get('/', async (_request, reply) => {
+    return reply.sendFile('index.html');
+  });
+
   app.get('/admin', async (_request, reply) => {
     return reply.sendFile('admin.html');
   });
