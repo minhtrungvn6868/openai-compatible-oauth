@@ -1,24 +1,24 @@
 import type { FastifyInstance, preHandlerHookHandler } from 'fastify';
 import type { PiAiService } from '../services/pi-ai.service.js';
-import type { ChatCompletionRequest } from '../types/openai.types.js';
+import type { CompletionRequest } from '../types/openai.types.js';
 
-export function registerChatRoutes(
+export function registerCompletionRoutes(
   app: FastifyInstance,
   piAiService: PiAiService,
   authHook: preHandlerHookHandler,
 ) {
-  app.post<{ Body: ChatCompletionRequest }>(
-    '/v1/chat/completions',
+  app.post<{ Body: CompletionRequest }>(
+    '/v1/completions',
     {
       preHandler: [authHook],
       schema: {
         body: {
           type: 'object',
-          required: ['messages'],
+          required: ['prompt'],
           additionalProperties: true,
           properties: {
             model: { type: 'string' },
-            messages: { type: 'array' },
+            prompt: {},
             stream: { type: 'boolean' },
           },
         },
@@ -36,7 +36,7 @@ export function registerChatRoutes(
         });
 
         try {
-          for await (const chunk of piAiService.chatStream(body)) {
+          for await (const chunk of piAiService.legacyStream(body)) {
             reply.raw.write(chunk);
           }
         } catch (error) {
@@ -52,7 +52,7 @@ export function registerChatRoutes(
         return reply;
       }
 
-      const result = await piAiService.chatComplete(body);
+      const result = await piAiService.legacyComplete(body);
       return reply.send(result);
     },
   );
