@@ -1,6 +1,7 @@
 export interface ApiKeyRecord {
   id: string;
   hashedKey: string;
+  keyHint: string;
   name: string;
   createdAt: string;
   expiresAt: string;
@@ -25,6 +26,7 @@ export interface ApiKeyCreateResponse {
 
 export interface ApiKeyListItem {
   id: string;
+  keyHint: string;
   name: string;
   createdAt: string;
   expiresAt: string;

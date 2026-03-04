@@ -69,9 +69,23 @@ pnpm build && pnpm start
 
 Server sẽ chạy tại `http://localhost:3003`.
 
-## Quản lý API Keys
+## Admin Panel
 
-API keys được quản lý qua admin endpoints, xác thực bằng `ADMIN_KEY`.
+Truy cập giao diện quản lý API keys tại:
+
+```
+http://localhost:3003/admin
+```
+
+Đăng nhập bằng `ADMIN_KEY`. Tại đây có thể:
+- Xem danh sách keys (hiển thị 4 ký tự cuối để nhận diện)
+- Tạo key mới
+- Bật/tắt (activate/deactivate) key
+- Xoá key
+
+## Quản lý API Keys (CLI)
+
+API keys cũng có thể quản lý qua CLI, xác thực bằng `ADMIN_KEY`.
 
 ### Tạo key mới
 
@@ -193,8 +207,10 @@ curl http://localhost:3003/v1/models
 | `GET` | `/v1/models/:id` — Chi tiet model | - |
 | `POST` | `/v1/embeddings` — Embeddings (khong ho tro, tra 501) | API Key |
 | `GET` | `/health` — Health check | - |
+| `GET` | `/admin` — Admin panel (web UI) | Admin Key |
 | `GET` | `/api/keys` — Liet ke API keys | Admin Key |
 | `POST` | `/api/keys` — Tao API key | Admin Key |
+| `PATCH` | `/api/keys/:id/toggle` — Bat/tat API key | Admin Key |
 | `DELETE` | `/api/keys/:id` — Xoa API key | Admin Key |
 
 ## Tinh nang ho tro

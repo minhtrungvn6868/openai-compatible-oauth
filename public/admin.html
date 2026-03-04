@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Key Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+  <!-- Login Screen -->
+  <div id="login-screen" class="flex items-center justify-center min-h-screen">
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-8 w-full max-w-sm shadow-2xl">
+      <h1 class="text-2xl font-bold mb-6 text-center">Admin Login</h1>
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-sm text-gray-400 mb-1">Admin Key</label>
+          <input type="password" id="admin-key-input"
+            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter admin key" required>
+        </div>
+        <div id="login-error" class="text-red-400 text-sm hidden"></div>
+        <div id="lockout-msg" class="text-yellow-400 text-sm hidden"></div>
+        <button type="submit" id="login-btn"
+          class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          Login
+        </button>
+      </form>
+      <p class="text-gray-600 text-xs mt-4 text-center">Password is the ADMIN_KEY value in .env</p>
+    </div>
+  </div>
+
+  <!-- Admin Panel -->
+  <div id="admin-panel" class="hidden max-w-5xl mx-auto p-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+      <h1 class="text-2xl font-bold">API Key Management</h1>
+      <button id="logout-btn"
+        class="text-gray-400 hover:text-gray-200 text-sm border border-gray-700 rounded-lg px-4 py-2 transition-colors">
+        Logout
+      </button>
+    </div>
+
+    <!-- Create Key Form -->
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+      <h2 class="text-lg font-semibold mb-4">Create New Key</h2>
+      <form id="create-key-form" class="flex flex-wrap gap-4 items-end">
+        <div class="flex-1 min-w-[180px]">
+          <label class="block text-sm text-gray-400 mb-1">Name</label>
+          <input type="text" id="key-name"
+            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="e.g. vscode-user-1" required>
+        </div>
+        <div class="min-w-[180px]">
+          <label class="block text-sm text-gray-400 mb-1">Expires At</label>
+          <input type="datetime-local" id="key-expires"
+            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required>
+        </div>
+        <div class="w-[120px]">
+          <label class="block text-sm text-gray-400 mb-1">Rate Limit</label>
+          <input type="number" id="key-rate-limit" value="60" min="1"
+            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <button type="submit"
+          class="bg-green-600 hover:bg-green-500 text-white font-medium px-6 py-2 rounded-lg transition-colors whitespace-nowrap">
+          + Create Key
+        </button>
+      </form>
+    </div>
+
+    <!-- New Key Display -->
+    <div id="new-key-banner" class="hidden bg-green-900/40 border border-green-700 rounded-xl p-4 mb-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-green-300 text-sm font-medium mb-1">New API Key Created — copy it now, it won't be shown again!</p>
+          <code id="new-key-value" class="text-green-100 text-lg font-mono bg-gray-800 px-3 py-1 rounded select-all"></code>
+        </div>
+        <button id="copy-key-btn"
+          class="bg-green-700 hover:bg-green-600 text-white text-sm px-4 py-2 rounded-lg transition-colors ml-4">
+          Copy
+        </button>
+      </div>
+    </div>
+
+    <!-- Keys Table -->
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-800/50">
+          <tr>
+            <th class="text-left px-4 py-3 text-gray-400 font-medium">Name</th>
+            <th class="text-left px-4 py-3 text-gray-400 font-medium">Key</th>
+            <th class="text-left px-4 py-3 text-gray-400 font-medium">Created</th>
+            <th class="text-left px-4 py-3 text-gray-400 font-medium">Expires</th>
+            <th class="text-left px-4 py-3 text-gray-400 font-medium">Rate Limit</th>
+            <th class="text-left px-4 py-3 text-gray-400 font-medium">Status</th>
+            <th class="text-right px-4 py-3 text-gray-400 font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="keys-table-body">
+        </tbody>
+      </table>
+      <div id="empty-state" class="hidden text-center py-12 text-gray-500">
+        No API keys found. Create one above.
+      </div>
+    </div>
+  </div>
+
+<script>
+const API_BASE = window.location.origin;
+
+function getAdminKey() {
+  return sessionStorage.getItem('adminKey') || '';
+}
+
+function headers(withBody = false) {
+  const h = { 'Authorization': `Bearer ${getAdminKey()}` };
+  if (withBody) h['Content-Type'] = 'application/json';
+  return h;
+}
+
+function formatDate(iso) {
+  return new Date(iso).toLocaleString();
+}
+
+function isExpired(iso) {
+  return new Date(iso) < new Date();
+}
+
+// Login with progressive lockout
+const LOCKOUT_DELAYS = [0, 0, 0, 5, 15, 30, 60, 300];
+let failCount = parseInt(sessionStorage.getItem('loginFailCount') || '0', 10);
+let lockedUntil = parseInt(sessionStorage.getItem('lockedUntil') || '0', 10);
+let lockoutTimer = null;
+
+function getLockoutDelay(fails) {
+  return LOCKOUT_DELAYS[Math.min(fails, LOCKOUT_DELAYS.length - 1)];
+}
+
+function formatSeconds(s) {
+  if (s >= 60) return `${Math.floor(s / 60)}m ${s % 60}s`;
+  return `${s}s`;
+}
+
+function updateLockoutUI() {
+  const now = Date.now();
+  const remaining = Math.ceil((lockedUntil - now) / 1000);
+  const loginBtn = document.getElementById('login-btn');
+  const lockoutMsg = document.getElementById('lockout-msg');
+  const errorEl = document.getElementById('login-error');
+
+  if (remaining > 0) {
+    loginBtn.disabled = true;
+    lockoutMsg.textContent = `Too many failed attempts. Try again in ${formatSeconds(remaining)}.`;
+    lockoutMsg.classList.remove('hidden');
+    errorEl.classList.add('hidden');
+    lockoutTimer = setTimeout(updateLockoutUI, 1000);
+  } else {
+    loginBtn.disabled = false;
+    lockoutMsg.classList.add('hidden');
+    if (lockoutTimer) clearTimeout(lockoutTimer);
+  }
+}
+
+updateLockoutUI();
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (Date.now() < lockedUntil) return;
+
+  const key = document.getElementById('admin-key-input').value.trim();
+  if (!key) return;
+
+  const errorEl = document.getElementById('login-error');
+
+  try {
+    const res = await fetch(`${API_BASE}/api/keys`, {
+      headers: { 'Authorization': `Bearer ${key}` },
+    });
+
+    if (!res.ok) {
+      failCount++;
+      sessionStorage.setItem('loginFailCount', String(failCount));
+      const delay = getLockoutDelay(failCount);
+      if (delay > 0) {
+        lockedUntil = Date.now() + delay * 1000;
+        sessionStorage.setItem('lockedUntil', String(lockedUntil));
+        updateLockoutUI();
+      } else {
+        errorEl.textContent = `Invalid admin key (attempt ${failCount}/3)`;
+        errorEl.classList.remove('hidden');
+      }
+      return;
+    }
+
+    failCount = 0;
+    lockedUntil = 0;
+    sessionStorage.setItem('loginFailCount', '0');
+    sessionStorage.setItem('lockedUntil', '0');
+    sessionStorage.setItem('adminKey', key);
+    errorEl.classList.add('hidden');
+    showAdminPanel();
+  } catch {
+    errorEl.textContent = 'Connection failed';
+    errorEl.classList.remove('hidden');
+  }
+});
+
+// Logout
+document.getElementById('logout-btn').addEventListener('click', () => {
+  sessionStorage.removeItem('adminKey');
+  document.getElementById('admin-panel').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('admin-key-input').value = '';
+});
+
+// Show admin panel
+function showAdminPanel() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('admin-panel').classList.remove('hidden');
+  loadKeys();
+}
+
+// Load keys
+async function loadKeys() {
+  const res = await fetch(`${API_BASE}/api/keys`, { headers: headers() });
+  if (res.status === 403) {
+    sessionStorage.removeItem('adminKey');
+    location.reload();
+    return;
+  }
+  const keys = await res.json();
+  renderKeys(keys);
+}
+
+// Render keys table
+function renderKeys(keys) {
+  const tbody = document.getElementById('keys-table-body');
+  const emptyState = document.getElementById('empty-state');
+
+  if (keys.length === 0) {
+    tbody.innerHTML = '';
+    emptyState.classList.remove('hidden');
+    return;
+  }
+
+  emptyState.classList.add('hidden');
+  tbody.innerHTML = keys.map((k) => {
+    const expired = isExpired(k.expiresAt);
+    const statusColor = !k.isActive ? 'text-red-400' : expired ? 'text-yellow-400' : 'text-green-400';
+    const statusBg = !k.isActive ? 'bg-red-400/10' : expired ? 'bg-yellow-400/10' : 'bg-green-400/10';
+    const statusText = !k.isActive ? 'Inactive' : expired ? 'Expired' : 'Active';
+    const toggleLabel = k.isActive ? 'Deactivate' : 'Activate';
+    const toggleColor = k.isActive
+      ? 'text-yellow-400 hover:text-yellow-300 hover:bg-yellow-400/10'
+      : 'text-green-400 hover:text-green-300 hover:bg-green-400/10';
+
+    return `<tr class="border-t border-gray-800 hover:bg-gray-800/30">
+      <td class="px-4 py-3 font-medium">${escapeHtml(k.name)}</td>
+      <td class="px-4 py-3 text-gray-400 font-mono">sk-...${escapeHtml(k.keyHint)}</td>
+      <td class="px-4 py-3 text-gray-400">${formatDate(k.createdAt)}</td>
+      <td class="px-4 py-3 text-gray-400">${formatDate(k.expiresAt)}</td>
+      <td class="px-4 py-3 text-gray-400">${k.rateLimit}/min</td>
+      <td class="px-4 py-3">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor} ${statusBg}">
+          ${statusText}
+        </span>
+      </td>
+      <td class="px-4 py-3 text-right space-x-2">
+        <button onclick="toggleKey('${k.id}')"
+          class="text-sm px-3 py-1 rounded-lg border border-gray-700 transition-colors ${toggleColor}">
+          ${toggleLabel}
+        </button>
+        <button onclick="deleteKey('${k.id}', '${escapeHtml(k.name)}')"
+          class="text-sm px-3 py-1 rounded-lg border border-gray-700 text-red-400 hover:text-red-300 hover:bg-red-400/10 transition-colors">
+          Delete
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Create key
+document.getElementById('create-key-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const name = document.getElementById('key-name').value.trim();
+  const expiresAt = new Date(document.getElementById('key-expires').value).toISOString();
+  const rateLimit = parseInt(document.getElementById('key-rate-limit').value, 10) || 60;
+
+  const res = await fetch(`${API_BASE}/api/keys`, {
+    method: 'POST',
+    headers: headers(true),
+    body: JSON.stringify({ name, expiresAt, rateLimit }),
+  });
+
+  if (!res.ok) {
+    alert('Failed to create key');
+    return;
+  }
+
+  const data = await res.json();
+
+  // Show the raw key
+  document.getElementById('new-key-value').textContent = data.key;
+  document.getElementById('new-key-banner').classList.remove('hidden');
+
+  // Reset form
+  document.getElementById('key-name').value = '';
+  document.getElementById('key-expires').value = '';
+  document.getElementById('key-rate-limit').value = '60';
+
+  loadKeys();
+});
+
+// Copy key
+document.getElementById('copy-key-btn').addEventListener('click', () => {
+  const key = document.getElementById('new-key-value').textContent;
+  navigator.clipboard.writeText(key).then(() => {
+    document.getElementById('copy-key-btn').textContent = 'Copied!';
+    setTimeout(() => {
+      document.getElementById('copy-key-btn').textContent = 'Copy';
+    }, 2000);
+  });
+});
+
+// Toggle key
+async function toggleKey(id) {
+  await fetch(`${API_BASE}/api/keys/${id}/toggle`, {
+    method: 'PATCH',
+    headers: headers(),
+  });
+  loadKeys();
+}
+
+// Delete key
+async function deleteKey(id, name) {
+  if (!confirm(`Delete key "${name}"? This cannot be undone.`)) return;
+
+  await fetch(`${API_BASE}/api/keys/${id}`, {
+    method: 'DELETE',
+    headers: headers(),
+  });
+  loadKeys();
+}
+
+// Set default expires to +365 days (local time for datetime-local input)
+const defaultExpires = new Date();
+defaultExpires.setFullYear(defaultExpires.getFullYear() + 1);
+const localISO = new Date(defaultExpires.getTime() - defaultExpires.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+document.getElementById('key-expires').value = localISO;
+
+// Auto-login if key is stored
+if (getAdminKey()) {
+  showAdminPanel();
+}
+</script>
+</body>
+</html>

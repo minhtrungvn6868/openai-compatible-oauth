@@ -47,6 +47,22 @@ export function registerKeyRoutes(
     },
   );
 
+  app.patch<{ Params: { id: string } }>(
+    '/api/keys/:id/toggle',
+    { preHandler: [adminAuth] },
+    async (request, reply) => {
+      const toggled = await keyService.toggleKey(request.params.id);
+
+      if (!toggled) {
+        return reply.status(404).send({
+          error: { message: 'Key not found' },
+        });
+      }
+
+      return reply.send({ success: true });
+    },
+  );
+
   app.delete<{ Params: { id: string } }>(
     '/api/keys/:id',
     { preHandler: [adminAuth] },

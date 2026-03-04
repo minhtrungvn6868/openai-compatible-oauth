@@ -45,6 +45,7 @@ export class KeyService {
     const record: ApiKeyRecord = {
       id: randomUUID(),
       hashedKey: hashed,
+      keyHint: rawKey.slice(-4),
       name: request.name,
       createdAt: now,
       expiresAt: request.expiresAt,
@@ -68,12 +69,23 @@ export class KeyService {
   listKeys(): ApiKeyListItem[] {
     return this.keys.map((k) => ({
       id: k.id,
+      keyHint: k.keyHint ?? '****',
       name: k.name,
       createdAt: k.createdAt,
       expiresAt: k.expiresAt,
       rateLimit: k.rateLimit,
       isActive: k.isActive,
     }));
+  }
+
+  async toggleKey(id: string): Promise<boolean> {
+    const record = this.keys.find((k) => k.id === id);
+    if (!record) {
+      return false;
+    }
+    record.isActive = !record.isActive;
+    await this.save();
+    return true;
   }
 
   async deleteKey(id: string): Promise<boolean> {
