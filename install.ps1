@@ -5,6 +5,16 @@
 
 $ErrorActionPreference = "Stop"
 
+# When piped via `irm | iex`, ensure interactive prompts work.
+# Read-Host reads from the console directly in PowerShell, so it works.
+# But we guard against non-interactive environments.
+if (-not [Environment]::UserInteractive) {
+    Write-Host "Error: This installer requires an interactive terminal." -ForegroundColor Red
+    Write-Host "  Download and run manually instead:"
+    Write-Host "  Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/minhtrungvn6868/openai-compatible-oauth/main/install.ps1' -OutFile install.ps1; .\install.ps1"
+    exit 1
+}
+
 $Repo = "minhtrungvn6868/openai-compatible-oauth"
 $InstallDir = "$env:USERPROFILE\.claude-proxy"
 $Version = if ($env:CLAUDE_PROXY_VERSION) { $env:CLAUDE_PROXY_VERSION } else { "latest" }
@@ -99,8 +109,8 @@ function Setup-Env {
     Write-Host "  │  How to get it:                                          │"
     Write-Host "  │  1. Install Claude Code (if not installed):              │"
     Write-Host "  │     " -NoNewline
-    Write-Host "npm install -g @anthropic-ai/claude-code" -ForegroundColor White -NoNewline
-    Write-Host "               │"
+    Write-Host "https://code.claude.com/docs" -ForegroundColor White -NoNewline
+    Write-Host "                              │"
     Write-Host "  │  2. Run in terminal:                                     │"
     Write-Host "  │     " -NoNewline
     Write-Host "claude setup-token" -ForegroundColor White -NoNewline

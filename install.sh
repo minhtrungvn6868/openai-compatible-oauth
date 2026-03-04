@@ -11,6 +11,20 @@ INSTALL_DIR="$HOME/.claude-proxy"
 BIN_DIR="/usr/local/bin"
 VERSION="${CLAUDE_PROXY_VERSION:-latest}"
 
+# When piped via `curl | sh`, stdin is the script itself.
+# We must read user input from /dev/tty instead.
+if [ ! -t 0 ]; then
+  if [ -e /dev/tty ]; then
+    TTY=/dev/tty
+  else
+    echo "Error: Cannot read user input. Run the script directly instead:"
+    echo "  curl -fsSL <url>/install.sh -o install.sh && sh install.sh"
+    exit 1
+  fi
+else
+  TTY=/dev/stdin
+fi
+
 # Colors (disabled if not a terminal)
 if [ -t 1 ]; then
   RED='\033[0;31m'
@@ -97,7 +111,7 @@ setup_env() {
     printf "\n"
     warn "Existing .env found at $INSTALL_DIR/.env"
     printf "  Overwrite? [y/N] "
-    read -r OVERWRITE
+    read -r OVERWRITE < "$TTY"
     case "$OVERWRITE" in
       [yY]|[yY][eE][sS]) ;;
       *)
@@ -120,7 +134,7 @@ setup_env() {
   printf "  │                                                          │\n"
   printf "  │  How to get it:                                          │\n"
   printf "  │  ${CYAN}1.${RESET} Install Claude Code (if not installed):               │\n"
-  printf "  │     ${BOLD}npm install -g @anthropic-ai/claude-code${RESET}               │\n"
+  printf "  │     ${BOLD}https://code.claude.com/docs${RESET}               │\n"
   printf "  │  ${CYAN}2.${RESET} Run in terminal:                                      │\n"
   printf "  │     ${BOLD}claude setup-token${RESET}                                     │\n"
   printf "  │  ${CYAN}3.${RESET} Login and authorize in the browser                    │\n"
@@ -128,7 +142,7 @@ setup_env() {
   printf "  └──────────────────────────────────────────────────────────┘\n"
   printf "\n"
   printf "  Enter ANTHROPIC_OAUTH_TOKEN: "
-  read -r TOKEN
+  read -r TOKEN < "$TTY"
 
   if [ -z "$TOKEN" ]; then
     fail "Token is required"
