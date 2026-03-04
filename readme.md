@@ -2,6 +2,12 @@
 
 Proxy server cung cấp OpenAI-compatible API, cho phép các client (VSCode extensions, Cursor, Continue.dev,...) kết nối tới Claude thông qua giao thức OpenAI.
 
+## Screenshots
+
+| Home & API Endpoints | API Key Management |
+|:---:|:---:|
+| ![Home](docs/image.png) | ![API Key Management](docs/image1.png) |
+
 ## Quick Usage
 
 Sau khi cài đặt (xem [Quick Install](#quick-install) hoặc [Manual Setup](#manual-setup-development)):
