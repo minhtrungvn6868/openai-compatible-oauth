@@ -5,9 +5,6 @@
 
 $ErrorActionPreference = "Stop"
 
-# When piped via `irm | iex`, ensure interactive prompts work.
-# Read-Host reads from the console directly in PowerShell, so it works.
-# But we guard against non-interactive environments.
 if (-not [Environment]::UserInteractive) {
     Write-Host "Error: This installer requires an interactive terminal." -ForegroundColor Red
     Write-Host "  Download and run manually instead:"
@@ -20,8 +17,8 @@ $InstallDir = "$env:USERPROFILE\.claude-proxy"
 $Version = if ($env:CLAUDE_PROXY_VERSION) { $env:CLAUDE_PROXY_VERSION } else { "latest" }
 
 function Write-Info { param([string]$Msg) Write-Host "  $Msg" -ForegroundColor Cyan }
-function Write-Ok { param([string]$Msg) Write-Host "  ✓ $Msg" -ForegroundColor Green }
-function Write-Fail { param([string]$Msg) Write-Host "  ✗ $Msg" -ForegroundColor Red }
+function Write-Ok   { param([string]$Msg) Write-Host "  v $Msg" -ForegroundColor Green }
+function Write-Fail { param([string]$Msg) Write-Host "  x $Msg" -ForegroundColor Red }
 function Write-Warn { param([string]$Msg) Write-Host "  ! $Msg" -ForegroundColor Yellow }
 
 function Print-Banner {
@@ -95,31 +92,30 @@ function Setup-Env {
         }
     }
 
-    # Auto-generate cryptographic keys
     $script:SecretKey = (node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))")
-    $script:SaltKey = (node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))")
-    $script:AdminKey = (node -e "process.stdout.write(require('crypto').randomBytes(16).toString('base64url'))")
+    $script:SaltKey   = (node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex'))")
+    $script:AdminKey  = (node -e "process.stdout.write(require('crypto').randomBytes(16).toString('base64url'))")
 
     Write-Host ""
-    Write-Host "  ┌──────────────────────────────────────────────────────────┐"
-    Write-Host "  │  " -NoNewline
+    Write-Host "  +----------------------------------------------------------+"
+    Write-Host "  |  " -NoNewline
     Write-Host "An Anthropic OAuth Token is required." -ForegroundColor White -NoNewline
-    Write-Host "                    │"
-    Write-Host "  │                                                          │"
-    Write-Host "  │  How to get it:                                          │"
-    Write-Host "  │  1. Install Claude Code (if not installed):              │"
-    Write-Host "  │     " -NoNewline
+    Write-Host "                    |"
+    Write-Host "  |                                                          |"
+    Write-Host "  |  How to get it:                                          |"
+    Write-Host "  |  1. Install Claude Code (if not installed):              |"
+    Write-Host "  |     " -NoNewline
     Write-Host "https://code.claude.com/docs" -ForegroundColor White -NoNewline
-    Write-Host "                              │"
-    Write-Host "  │  2. Run in terminal:                                     │"
-    Write-Host "  │     " -NoNewline
+    Write-Host "                              |"
+    Write-Host "  |  2. Run in terminal:                                     |"
+    Write-Host "  |     " -NoNewline
     Write-Host "claude setup-token" -ForegroundColor White -NoNewline
-    Write-Host "                                     │"
-    Write-Host "  │  3. Login and authorize in the browser                   │"
-    Write-Host "  │  4. Copy the token (starts with " -NoNewline
+    Write-Host "                                     |"
+    Write-Host "  |  3. Login and authorize in the browser                   |"
+    Write-Host "  |  4. Copy the token (starts with " -NoNewline
     Write-Host "sk-ant-oat01-" -ForegroundColor Yellow -NoNewline
-    Write-Host ")            │"
-    Write-Host "  └──────────────────────────────────────────────────────────┘"
+    Write-Host ")            |"
+    Write-Host "  +----------------------------------------------------------+"
     Write-Host ""
 
     $token = Read-Host "  Enter ANTHROPIC_OAUTH_TOKEN"
@@ -145,10 +141,10 @@ DEFAULT_MODEL=claude-sonnet-4-6
 function Create-Launcher {
     Write-Info "[4/5] Creating launcher..."
 
-    # Create a batch file wrapper
-    $batchContent = @"
+    # FIX: Use 'type "%PIDFILE%"' inside for /f to handle paths with spaces correctly
+    $batchContent = @'
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 
 set "INSTALL_DIR=%USERPROFILE%\.claude-proxy"
 set "PIDFILE=%INSTALL_DIR%\.pid"
@@ -165,22 +161,31 @@ goto help
 
 :start
 if exist "%PIDFILE%" (
-    for /f %%i in (%PIDFILE%) do (
+    for /f "usebackq" %%i in ("%PIDFILE%") do (
         tasklist /fi "PID eq %%i" 2>nul | find "%%i" >nul 2>&1
         if not errorlevel 1 (
-            echo claude-proxy is already running ^(PID %%i^)
+            echo claude-proxy is already running (PID %%i)
             goto :eof
         )
     )
 )
 cd /d "%INSTALL_DIR%"
-start /b "claude-proxy" cmd /c "node server.mjs >> "%LOGFILE%" 2>&1"
-timeout /t 1 /nobreak >nul
-for /f "tokens=2" %%a in ('tasklist /v /fi "WINDOWTITLE eq claude-proxy" /fo list ^| find "PID:"') do (
-    echo %%a> "%PIDFILE%"
-    echo claude-proxy started ^(PID %%a^)
+
+:: FIX: Start node directly and capture PID using wmic
+start /b "" node "%INSTALL_DIR%\server.mjs" >> "%LOGFILE%" 2>&1
+timeout /t 2 /nobreak >nul
+
+:: FIX: Get PID of the most recently started node process reliably
+for /f "tokens=1" %%p in ('wmic process where "name='node.exe'" get ProcessId /value ^| find "ProcessId=" ^| sort /r') do (
+    for /f "tokens=2 delims==" %%v in ("%%p") do (
+        echo %%v> "%PIDFILE%"
+        echo claude-proxy started (PID %%v)
+        goto :show_urls
+    )
 )
-for /f "tokens=2 delims==" %%p in ('findstr /b "PORT=" "%INSTALL_DIR%\.env"') do (
+
+:show_urls
+for /f "usebackq tokens=2 delims==" %%p in (`findstr /b "PORT=" "%INSTALL_DIR%\.env"`) do (
     echo   Admin:  http://localhost:%%p/admin
     echo   API:    http://localhost:%%p/v1
 )
@@ -189,7 +194,7 @@ goto :eof
 
 :stop
 if exist "%PIDFILE%" (
-    for /f %%i in (%PIDFILE%) do (
+    for /f "usebackq" %%i in ("%PIDFILE%") do (
         taskkill /pid %%i /f >nul 2>&1
     )
     del "%PIDFILE%"
@@ -202,17 +207,16 @@ goto :eof
 :restart
 call :stop
 timeout /t 1 /nobreak >nul
-call :start
-goto :eof
+goto start
 
 :status
 if exist "%PIDFILE%" (
-    for /f %%i in (%PIDFILE%) do (
+    for /f "usebackq" %%i in ("%PIDFILE%") do (
         tasklist /fi "PID eq %%i" 2>nul | find "%%i" >nul 2>&1
         if not errorlevel 1 (
-            echo claude-proxy is running ^(PID %%i^)
+            echo claude-proxy is running (PID %%i)
         ) else (
-            echo claude-proxy is not running ^(stale PID file^)
+            echo claude-proxy is not running (stale PID file)
             del "%PIDFILE%"
         )
     )
@@ -251,7 +255,7 @@ echo   status     Show server status
 echo   logs       Show server logs
 echo   uninstall  Remove claude-proxy completely
 goto :eof
-"@
+'@
 
     $binDir = Join-Path $env:USERPROFILE "bin"
     New-Item -ItemType Directory -Force -Path $binDir | Out-Null
@@ -259,7 +263,6 @@ goto :eof
     $batchPath = Join-Path $binDir "claude-proxy.cmd"
     Set-Content -Path $batchPath -Value $batchContent -Encoding ASCII
 
-    # Add to PATH if not already there
     $currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
     if ($currentPath -notlike "*$binDir*") {
         [Environment]::SetEnvironmentVariable("Path", "$binDir;$currentPath", "User")
@@ -273,25 +276,44 @@ goto :eof
 function Setup-Autostart {
     Write-Info "[5/5] Setting up auto-start on boot..."
 
-    $nodePath = (Get-Command node).Source
+    $nodePath   = (Get-Command node).Source
     $serverPath = Join-Path $InstallDir "server.mjs"
+    $logFile    = Join-Path $InstallDir "server.log"
+    $taskName   = "ClaudeProxy"
 
-    # Use Windows Task Scheduler
-    $taskName = "ClaudeProxy"
+    # FIX: Use 2>&1 | Out-Null to properly suppress stderr from schtasks delete
+    # when task does not yet exist (avoids NativeCommandError throw)
+    try {
+        schtasks /delete /tn $taskName /f 2>&1 | Out-Null
+    } catch {
+        # Task didn't exist — safe to ignore
+    }
 
-    # Remove existing task if any
-    schtasks /delete /tn $taskName /f 2>$null
+    # FIX: Use PowerShell-native Register-ScheduledTask instead of schtasks /create
+    # to avoid argument quoting/escaping issues with paths containing spaces
+    $action  = New-ScheduledTaskAction `
+                   -Execute $nodePath `
+                   -Argument "`"$serverPath`"" `
+                   -WorkingDirectory $InstallDir
+    $trigger = New-ScheduledTaskTrigger -AtLogOn
+    $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 0)
 
-    $action = "cmd /c `"cd /d `"$InstallDir`" && `"$nodePath`" `"$serverPath`" >> `"$InstallDir\server.log`" 2>&1`""
+    Register-ScheduledTask `
+        -TaskName $taskName `
+        -Action   $action `
+        -Trigger  $trigger `
+        -Settings $settings `
+        -RunLevel Limited `
+        -Force | Out-Null
 
-    schtasks /create /tn $taskName `
-        /tr $action `
-        /sc onlogon `
-        /rl limited `
-        /f | Out-Null
-
-    # Start the server now
-    Start-Process -NoNewWindow -FilePath "cmd" -ArgumentList "/c cd /d `"$InstallDir`" && node server.mjs >> `"$InstallDir\server.log`" 2>&1" -WindowStyle Hidden
+    # Start the server right now (redirect stdout+stderr to log)
+    Start-Process `
+        -FilePath         $nodePath `
+        -ArgumentList     "`"$serverPath`"" `
+        -WorkingDirectory $InstallDir `
+        -WindowStyle      Hidden `
+        -RedirectStandardOutput $logFile `
+        -RedirectStandardError  "$InstallDir\server-error.log"
 
     Write-Ok "Auto-start configured (Windows Task Scheduler)"
     Write-Ok "Server is now running!"
@@ -301,13 +323,13 @@ function Print-Summary {
     $port = ((Get-Content (Join-Path $InstallDir ".env")) -match "^PORT=") -replace "^PORT=", ""
 
     Write-Host ""
-    Write-Host "  ══════════════════════════════════════════════════" -ForegroundColor White
+    Write-Host "  ==================================================" -ForegroundColor White
     Write-Host "    Setup completed successfully!" -ForegroundColor Green
-    Write-Host "  ══════════════════════════════════════════════════" -ForegroundColor White
+    Write-Host "  ==================================================" -ForegroundColor White
     Write-Host ""
     Write-Host "  ADMIN KEY" -ForegroundColor White -NoNewline
     Write-Host " (save this — shown only once!):"
-    Write-Host "  → $($script:AdminKey)" -ForegroundColor Yellow
+    Write-Host "  -> $($script:AdminKey)" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "  Commands:" -ForegroundColor White
     Write-Host "    claude-proxy start      Start the server"
@@ -329,7 +351,7 @@ function Print-Summary {
     Write-Host "http://localhost:${port}/v1" -ForegroundColor White
     Write-Host "     API Key:  <key from admin panel>"
     Write-Host ""
-    Write-Host "  ══════════════════════════════════════════════════" -ForegroundColor White
+    Write-Host "  ==================================================" -ForegroundColor White
     Write-Host ""
 }
 
